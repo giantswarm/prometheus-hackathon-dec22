@@ -26,6 +26,7 @@ import (
 	"time"
 
 	"github.com/go-kit/log"
+	"github.com/hanjos/nexus/util"
 	"github.com/prometheus/common/model"
 	"gopkg.in/yaml.v2"
 
@@ -321,10 +322,19 @@ func (tg *testGroup) test(evalInterval time.Duration, groupOrderMap map[string]i
 					if tg.TestGroupName != "" {
 						testName = fmt.Sprintf("    name: %s,\n", tg.TestGroupName)
 					}
-					expString := indentLines(expAlerts.String(), "            ")
-					gotString := indentLines(gotAlerts.String(), "            ")
-					errs = append(errs, fmt.Errorf("%s    alertname: %s, time: %s, \n        exp:%v, \n        got:%v",
-						testName, testcase.Alertname, testcase.EvalTime.String(), expString, gotString))
+
+					var formatDiff []string
+					diffLabels, _, _ := util.MapDiff(expAlerts[0].Labels.Map(), gotAlerts[0].Labels.Map())
+					for _, diff := range diffLabels {
+						formatDiff = append(formatDiff, fmt.Sprintf("      Label: %s\n        Exp: %s\n        Got: %s\n", diff, expAlerts[0].Labels.Get(diff), gotAlerts[0].Labels.Get(diff)))
+					}
+
+					//expString := indentLines(expAlerts.String(), "            ")
+					//gotString := indentLines(gotAlerts.String(), "            ")
+					// errs = append(errs, fmt.Errorf("%s    alertname: %s, time: %s, \n        exp:%v, \n        got:%v",
+					// 	testName, testcase.Alertname, testcase.EvalTime.String(), expString, gotString))
+					errs = append(errs, fmt.Errorf("%s    alertname: %s, time: %s, \n    diff:\n%s",
+						testName, testcase.Alertname, testcase.EvalTime.String(), strings.Join(formatDiff, "")))
 				}
 			}
 
