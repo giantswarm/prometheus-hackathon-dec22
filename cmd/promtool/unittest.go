@@ -324,9 +324,26 @@ func (tg *testGroup) test(evalInterval time.Duration, groupOrderMap map[string]i
 					}
 
 					var formatDiff []string
-					diffLabels, _, _ := util.MapDiff(expAlerts[0].Labels.Map(), gotAlerts[0].Labels.Map())
+					diffLabels, expectedLabels, actualLabels := util.MapDiff(expAlerts[0].Labels.Map(), gotAlerts[0].Labels.Map())
+					// fmt.Println("expected = ", expectedLabels)
+					// fmt.Println("actual = ", actual)
+					// fmt.Println("difflabels = ", diffLabels)
 					for _, diff := range diffLabels {
-						formatDiff = append(formatDiff, fmt.Sprintf("      Label: %s\n        Exp: %s\n        Got: %s\n", diff, expAlerts[0].Labels.Get(diff), gotAlerts[0].Labels.Get(diff)))
+						if diff != "" {
+							formatDiff = append(formatDiff, fmt.Sprintf("      Label: %s\n        Exp: %s\n        Got: %s\n", diff, expAlerts[0].Labels.Get(diff), gotAlerts[0].Labels.Get(diff)))
+						}
+					}
+
+					for _, expected := range expectedLabels {
+						if expected != "" {
+							formatDiff = append(formatDiff, fmt.Sprintf("      Label: \n        Exp: %s\n        Got: \n", expected))
+						}
+					}
+
+					for _, actual := range actualLabels {
+						if actual != "" {
+							formatDiff = append(formatDiff, fmt.Sprintf("      Label: \n        Exp: \n        Got: %s\n", actual))
+						}
 					}
 
 					//expString := indentLines(expAlerts.String(), "            ")
