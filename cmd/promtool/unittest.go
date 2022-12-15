@@ -317,35 +317,35 @@ func (tg *testGroup) test(evalInterval time.Duration, groupOrderMap map[string]i
 				sort.Sort(gotAlerts)
 				sort.Sort(expAlerts)
 
-				// if !reflect.DeepEqual(expAlerts, gotAlerts) {
-				var testName string
-				if tg.TestGroupName != "" {
-					testName = fmt.Sprintf("    name: %s,\n", tg.TestGroupName)
+				if !reflect.DeepEqual(expAlerts, gotAlerts) {
+					var testName string
+					if tg.TestGroupName != "" {
+						testName = fmt.Sprintf("    name: %s,\n", tg.TestGroupName)
+					}
+
+					var formatDiff []string
+					diffLabels, expectedLabels, actualLabels := util.MapDiff(expAlerts[0].Labels.Map(), gotAlerts[0].Labels.Map())
+					for _, diff := range diffLabels {
+						formatDiff = append(formatDiff, fmt.Sprintf("      Label: %s\n        Exp: %s\n        Got: %s\n", diff, expAlerts[0].Labels.Get(diff), gotAlerts[0].Labels.Get(diff)))
+					}
+
+					diffAnnotations, expectedAnnotations, actualAnnotations := util.MapDiff(expAlerts[0].Annotations.Map(), gotAlerts[0].Annotations.Map())
+					for _, diff := range diffAnnotations {
+						formatDiff = append(formatDiff, fmt.Sprintf("      Annotation: %s\n        Exp: %s\n        Got: %s\n", diff, expAlerts[0].Annotations.Get(diff), gotAlerts[0].Annotations.Get(diff)))
+					}
+
+					formatDiff = formatMissingUnknownLabelsOrAnnotations(formatDiff, expectedLabels, "Expected labels")
+					formatDiff = formatMissingUnknownLabelsOrAnnotations(formatDiff, expectedAnnotations, "Expected annotations")
+					formatDiff = formatMissingUnknownLabelsOrAnnotations(formatDiff, actualLabels, "Not expected labels")
+					formatDiff = formatMissingUnknownLabelsOrAnnotations(formatDiff, actualAnnotations, "Not expected annotations")
+
+					// expString := indentLines(expAlerts.String(), "            ")
+					// gotString := indentLines(gotAlerts.String(), "            ")
+					// errs = append(errs, fmt.Errorf("%s    alertname: %s, time: %s, \n        exp:%v, \n        got:%v",
+					// 	testName, testcase.Alertname, testcase.EvalTime.String(), expString, gotString))
+					errs = append(errs, fmt.Errorf("%s    Alertname: %s, time: %s, \n    Diff:\n%s\n-------",
+						testName, testcase.Alertname, testcase.EvalTime.String(), strings.Join(formatDiff, "")))
 				}
-
-				var formatDiff []string
-				diffLabels, expectedLabels, actualLabels := util.MapDiff(expAlerts[0].Labels.Map(), gotAlerts[0].Labels.Map())
-				for _, diff := range diffLabels {
-					formatDiff = append(formatDiff, fmt.Sprintf("      Label: %s\n        Exp: %s\n        Got: %s\n", diff, expAlerts[0].Labels.Get(diff), gotAlerts[0].Labels.Get(diff)))
-				}
-
-				diffAnnotations, expectedAnnotations, actualAnnotations := util.MapDiff(expAlerts[0].Annotations.Map(), gotAlerts[0].Annotations.Map())
-				for _, diff := range diffAnnotations {
-					formatDiff = append(formatDiff, fmt.Sprintf("      Annotation: %s\n        Exp: %s\n        Got: %s\n", diff, expAlerts[0].Annotations.Get(diff), gotAlerts[0].Annotations.Get(diff)))
-				}
-
-				formatDiff = formatMissingUnknownLabelsOrAnnotations(formatDiff, expectedLabels, "Expected labels")
-				formatDiff = formatMissingUnknownLabelsOrAnnotations(formatDiff, expectedAnnotations, "Expected annotations")
-				formatDiff = formatMissingUnknownLabelsOrAnnotations(formatDiff, actualLabels, "Not expected labels")
-				formatDiff = formatMissingUnknownLabelsOrAnnotations(formatDiff, actualAnnotations, "Not expected annotations")
-
-				// expString := indentLines(expAlerts.String(), "            ")
-				// gotString := indentLines(gotAlerts.String(), "            ")
-				// errs = append(errs, fmt.Errorf("%s    alertname: %s, time: %s, \n        exp:%v, \n        got:%v",
-				// 	testName, testcase.Alertname, testcase.EvalTime.String(), expString, gotString))
-				errs = append(errs, fmt.Errorf("%s    Alertname: %s, time: %s, \n    Diff:\n%s\n-------",
-					testName, testcase.Alertname, testcase.EvalTime.String(), strings.Join(formatDiff, "")))
-				//}
 			}
 
 			curr++
