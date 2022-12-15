@@ -14,6 +14,7 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"fmt"
@@ -27,6 +28,7 @@ import (
 
 	"github.com/go-kit/log"
 	"github.com/prometheus/common/model"
+	"github.com/sergi/go-diff/diffmatchpatch"
 	"gopkg.in/yaml.v2"
 
 	"github.com/prometheus/prometheus/model/labels"
@@ -317,14 +319,74 @@ func (tg *testGroup) test(evalInterval time.Duration, groupOrderMap map[string]i
 				sort.Sort(expAlerts)
 
 				if !reflect.DeepEqual(expAlerts, gotAlerts) {
-					var testName string
-					if tg.TestGroupName != "" {
-						testName = fmt.Sprintf("    name: %s,\n", tg.TestGroupName)
-					}
 					expString := indentLines(expAlerts.String(), "            ")
 					gotString := indentLines(gotAlerts.String(), "            ")
-					errs = append(errs, fmt.Errorf("%s    alertname: %s, time: %s, \n        exp:%v, \n        got:%v",
-						testName, testcase.Alertname, testcase.EvalTime.String(), expString, gotString))
+
+					// var testName string
+					// if tg.TestGroupName != "" {
+					// 	testName = fmt.Sprintf("    name: %s,\n", tg.TestGroupName)
+					// }
+					// errs = append(errs, fmt.Errorf("%s    alertname: %s, time: %s, \n        exp:%v, \n        got:%v",
+					// 	testName, testcase.Alertname, testcase.EvalTime.String(), expString, gotString))
+					// fmt.Println("helloworld")
+					// fmt.Println("...", expString)
+					// fmt.Println(">>>", gotString)
+					dmp := diffmatchpatch.New()
+					// fmt.Println("----", cmp.Diff(expAlerts[0].Labels, gotAlerts[0].Labels))
+					diffs := dmp.DiffMain(expString, gotString, false)
+					// fmt.Println(reflect.TypeOf(diffs))
+					// s := fmt.Sprintf("%s", diffs)
+					// fmt.Println("s=", s)
+					// fmt.Println(dmp.DiffPrettyText(diffs))
+					// fmt.Println(diffs)
+					// reg := regexp.MustCompile(`{Insert [^}]*}`)
+					// res := reg.ReplaceAllString(s, "${1}")
+					// fmt.Println("==>", res)
+					// fmt.Println(dmp.DiffPrettyText(diffs))
+					// fmt.Println("----")
+					// fmt.Println("Exp = ", dmp.DiffText1(diffs))
+					// fmt.Println("Exp = ", reflect.TypeOf(dmp.DiffText1(diffs)))
+					// type diffmatchpatch.Operation int8
+
+					const (
+						// DiffDelete item represents a delete diff.
+						DiffDelete diffmatchpatch.Operation = -1
+						// DiffInsert item represents an insert diff.
+						DiffInsert diffmatchpatch.Operation = 1
+						// DiffEqual item represents an equal diff.
+						DiffEqual diffmatchpatch.Operation = 0
+					)
+					var buff1 bytes.Buffer
+					for _, diff := range diffs {
+						text := diff.Text
+						// fmt.Println(diff.Type, reflect.TypeOf(diff.Type))
+						switch diff.Type {
+						case DiffDelete:
+							_, _ = buff1.WriteString("\x1b[31m")
+							_, _ = buff1.WriteString(text)
+							_, _ = buff1.WriteString("\x1b[0m")
+						case DiffEqual:
+							_, _ = buff1.WriteString(text)
+						}
+					}
+					fmt.Println("Got = ", buff1.String())
+
+					var buff2 bytes.Buffer
+					for _, diff := range diffs {
+						text := diff.Text
+						// fmt.Println(diff.Type, reflect.TypeOf(diff.Type))
+						switch diff.Type {
+						case DiffInsert:
+							_, _ = buff2.WriteString("\x1b[32m")
+							_, _ = buff2.WriteString(text)
+							_, _ = buff2.WriteString("\x1b[0m")
+						case DiffEqual:
+							_, _ = buff2.WriteString(text)
+						}
+					}
+					fmt.Println("Exp = ", buff2.String())
+
+					// fmt.Println("Got = ", dmp.DiffText2(diffs))
 				}
 			}
 
